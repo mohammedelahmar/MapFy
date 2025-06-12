@@ -2,7 +2,7 @@ import React from 'react';
 
 const SaveLoadToolbar = ({ onNewMap, onSaveMap, onLoadMap }) => {
   return (
-    <div className="absolute save-load-toolbar bg-white rounded-md shadow-md p-1">
+    <div className="bg-white rounded-md shadow-md p-1">
       <div className="flex items-center space-x-1">
         <button 
           onClick={onNewMap}

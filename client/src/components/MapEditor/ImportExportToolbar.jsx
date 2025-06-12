@@ -2,7 +2,7 @@ import React from 'react';
 
 const ImportExportToolbar = ({ onImportClick, onExportClick }) => {
   return (
-    <div className="absolute import-export-toolbar bg-white rounded-md shadow-md p-1">
+    <div className="bg-white rounded-md shadow-md p-1">
       <div className="flex flex-col space-y-1">
         <button 
           onClick={onImportClick}

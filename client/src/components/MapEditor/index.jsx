@@ -16,7 +16,8 @@ import ImportModal from './modals/ImportModal';
 import ExportModal from './modals/ExportModal';
 import SaveMapModal from './modals/SaveMapModal';
 import LoadMapModal from './modals/LoadMapModal';
-
+import ElevationDisplay from './ElevationDisplay';
+import { calculateMeasurements } from '../../utils/measurementUtils';
 // Set your Mapbox token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
@@ -68,8 +69,12 @@ const MapEditor = () => {
     cleanUpDrawTools,
     logMapState,
     isInitialized,
-    updateDrawStyles
+    updateDrawStyles,
+    elevationData  // Add this line
   } = useDrawTools(map, '#3FB1CE');
+
+  // State for hover measurements
+  const [hoverMeasurements, setHoverMeasurements] = useState({ area: null, distance: null });
 
   // We'll use this to force initialization manually
   const forceInitialize = useCallback(() => {
@@ -375,6 +380,39 @@ const MapEditor = () => {
     }
   };
 
+  // Enhanced hover handler
+  const handleMapHover = useCallback((e) => {
+    if (!map?.current || !draw?.current) return;
+
+    // Find features at the pointer
+    const features = draw.current.getFeatureIdsAt(e.point);
+    
+    if (features.length > 0) {
+      const feature = draw.current.get(features[0]);
+      if (feature) {
+        const measurements = calculateMeasurements({ 
+          type: 'FeatureCollection', 
+          features: [feature] 
+        }, map.current);
+        setHoverMeasurements(measurements);
+      }
+    } else {
+      setHoverMeasurements({ area: null, distance: null });
+    }
+  }, [map, draw]);
+
+  // Add this effect to setup the hover handler
+  useEffect(() => {
+    if (map?.current && drawReady) {
+      map.current.on('mousemove', handleMapHover);
+      return () => {
+        if (map.current) {
+          map.current.off('mousemove', handleMapHover);
+        }
+      };
+    }
+  }, [map, drawReady, handleMapHover]);
+
   // Return the component JSX
   return (
     <div className="relative h-full w-full">
@@ -399,9 +437,19 @@ const MapEditor = () => {
       
       {/* Coordinate display */}
       <CoordinateDisplay lng={lng} lat={lat} zoom={zoom} />
+
+      {/* Elevation Display */}
+      <ElevationDisplay elevation={elevationData} />
+
+      {/* Measurements Display - show both selected and hover measurements */}
+      <MeasurementsDisplay 
+        measurements={measurements}
+        hoverMeasurements={hoverMeasurements}
+        position="bottom-left"
+      />
       
-      {/* Import/Export Toolbar */}
-      <div className="absolute left-2 top-72 z-20">
+      {/* Import/Export Toolbar - positioned under the geolocate control */}
+      <div className="absolute right-1 top-60 z-3">
         <ImportExportToolbar 
           onImportClick={() => setImportModalOpen(true)}
           onExportClick={() => setExportModalOpen(true)}
@@ -432,17 +480,14 @@ const MapEditor = () => {
         }} />
       </div>
       
-      {/* Save/Load Toolbar */}
-      <div className="absolute top-2 right-2 z-20">
+      {/* Save/Load Toolbar - with improved visibility */}
+      <div className="absolute top-2 right-2 z-30">
         <SaveLoadToolbar
           onNewMap={handleNewMap}
           onSaveMap={() => setSaveMapModalOpen(true)}
           onLoadMap={() => setLoadMapModalOpen(true)}
         />
       </div>
-      
-      {/* Measurements Display */}
-      <MeasurementsDisplay measurements={measurements} />
       
       {/* Modals - higher z-index */}
       {importModalOpen && (
